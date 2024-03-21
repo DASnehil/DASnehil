@@ -1,0 +1,52 @@
+import os
+import pandas as pd
+import requests
+
+def csv_downloads(root_url):
+    # Create the save directory if it doesn't exist
+    directory_storage = 'csv_downloads'
+    if not os.path.exists(directory_storage):
+        os.makedirs(directory_storage)
+    
+    # Dictionary to store DataFrames
+    dataframes = {}
+    
+    # Download CSV files and save them in individual DataFrames
+    for char in range(ord('a'), ord('z')+1):
+        filename = f"{chr(char)}.csv"
+        csv_url = f"{root_url}/{filename}"
+        file_path = os.path.join(directory_storage, filename)
+        print(f"Downloading {csv_url} to {file_path}")
+        csv_response = requests.get(csv_url)
+        
+        if csv_response.status_code == 200:
+            with open(file_path, 'wb') as f:
+                f.write(csv_response.content)
+            print(f"Downloaded {csv_url}")
+            
+            # Read CSV into DataFrame and store in dictionary
+            df = pd.read_csv(file_path)
+            dataframes[filename] = df
+        else:
+            print(f"Failed to download {csv_url}")
+        
+    return dataframes
+
+# Usage
+root_url = 'https://public.wiwdata.com/engineering-challenge/data'
+dataframes = csv_downloads(root_url)
+
+# Concatenate all DataFrames into a single DataFrame
+concatenated_df = pd.concat(dataframes, ignore_index=True)
+
+
+#Using Pivot to transform the data in the desired format
+pivoted_df = concatenated_df.pivot(index='user_id', columns='path', values='length').reset_index()
+
+#Filling in NaN values with 0
+pivoted_df = pivoted_df.fillna(0)
+
+#Exporting to CSV
+pivoted_df.to_csv('csv_downloads/output_data.csv')
+
+pivoted_df
